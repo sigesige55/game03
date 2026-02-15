@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミーム英語ポリス - Native Buster -</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --correct-color: #27ae60;
+            --bg-color: #f0f2f5;
+            --chat-bg-me: #dcf8c6;
+            --chat-bg-other: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #333;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 850px;
+            background-color: var(--bg-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        .hp-container {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+
+        #game-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 80px; /* フッターとかぶらないように */
+        }
+
+        .chat-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .chat-row.jp { flex-direction: row; }
+        .chat-row.en { flex-direction: row-reverse; }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .bubble.jp {
+            background-color: var(--chat-bg-other);
+            border-top-left-radius: 0;
+        }
+
+        .bubble.en {
+            background-color: var(--chat-bg-me);
+            border-top-right-radius: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .word-btn {
+            background: rgba(255,255,255,0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.1s;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        .word-btn:active { transform: scale(0.95); }
+
+        .word-btn.busted {
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: bold;
+            animation: pop 0.3s ease-out;
+            pointer-events: none;
+        }
+        
+        .word-btn.busted::after {
+            content: "BUSTED!";
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            background: black;
+            color: yellow;
+            padding: 2px 4px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .word-btn.wrong-tap {
+            background-color: #95a5a6;
+            animation: shake-small 0.3s;
+        }
+
+        footer {
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+
+        .action-btn:active { transform: scale(0.98); }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(44, 62, 80, 0.95);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 { font-size: 2rem; margin-bottom: 10px; color: #f1c40f; text-transform: uppercase;}
+        h2 { font-size: 1.5rem; color: var(--accent-color); }
+        p { line-height: 1.6; }
+
+        .review-box {
+            background: white;
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: left;
+            width: 100%;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .review-item {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .review-correct { color: var(--correct-color); font-weight: bold; }
+        .review-wrong { color: var(--accent-color); text-decoration: line-through; }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        @keyframes shake-small {
+             0%, 100% { transform: translateX(0); }
+             25% { transform: translateX(-5px); }
+             75% { transform: translateX(5px); }
+        }
+
+        .damage-effect {
+            animation: shake 0.5s;
+            border: 2px solid red;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <header>
+        <div id="stage-display">STAGE 1</div>
+        <div class="hp-container">HP: <span id="hp-display">❤️❤️❤️</span></div>
+    </header>
+
+    <div id="game-area"></div>
+
+    <footer>
+        <button id="finish-btn" class="action-btn" onclick="checkFinish()">捜査終了 (FINISH)</button>
+    </footer>
+
+    <!-- スタート画面 -->
+    <div id="start-screen" class="overlay">
+        <h1>Meme English<br>Police</h1>
+        <p>ネットスラング直訳の「変な英語」を取り締まれ！<br>
+        間違った単語をタップして修正せよ。</p>
+        <button class="action-btn" onclick="startGame()">PATROL START</button>
+    </div>
+
+    <!-- 解説画面 -->
+    <div id="review-screen" class="overlay hidden">
+        <h2 style="color:#2ecc71">MISSION CLEAR!</h2>
+        <div class="review-box" id="review-content"></div>
+        <button class="action-btn" onclick="nextStage()">NEXT CASE</button>
+    </div>
+
+    <!-- ゲームオーバー画面 -->
+    <div id="gameover-screen" class="overlay hidden">
+        <h2 style="color: #c0392b">GAME OVER</h2>
+        <p>誤認逮捕のしすぎで<br>クビになりました。</p>
+        <p>到達ステージ: <span id="final-score" style="font-size: 2rem; font-weight:bold;">0</span></p>
+        <!-- 修正: onclickをリロードではなくリセット関数に変更 -->
+        <button class="action-btn" onclick="retryGame()">RETRY</button>
+    </div>
+</div>
+
+<script>
+    // --- データ定義 ---
+    const questions = [
+        {
+            jp: "それな。",
+            template: ["That", "name", "is", "correct", "."],
+            mistakes: [
+                { index: 1, wrong: "name", correct: "right", explain: "「それな」を 'That name' (その名前) と直訳するのは間違い。'That's right' や 'Exactly' が自然です。" }
+            ]
+        },
+        {
+            jp: "草w",
+            template: ["Big", "grass", "growing", "."],
+            mistakes: [
+                { index: 1, wrong: "grass", correct: "laughs", explain: "「草（www）」は笑いを表しますが、'Grass' (芝生) は植物です。英語では 'LOL' (Laughing Out Loud) などを使います。" },
+                { index: 2, wrong: "growing", correct: "here", explain: "文脈的に笑いがあることを伝えたいので、植物が育つ(growing)は不自然です。" }
+            ]
+        },
+        {
+            jp: "このゲーム、無理ゲーすぎる。",
+            template: ["This", "is", "an", "impossible", "gay", "."],
+            mistakes: [
+                { index: 4, wrong: "gay", correct: "game", explain: "カタカナ英語の罠。'Game' (ゲーム) と 'Gay' (同性愛者) は発音が違います。これはとんでもない誤訳になります。" }
+            ]
+        },
+        {
+            jp: "ワンチャンあるで。",
+            template: ["There", "is", "one", "dog", "."],
+            mistakes: [
+                { index: 2, wrong: "one", correct: "a", explain: "「ワンチャン」は 'One Chance' の略ですが、'One' (数字の1) と直訳しません。" },
+                { index: 3, wrong: "dog", correct: "chance", explain: "「ワン（犬）」ではありません。'Dog' だとただ犬がいるだけになります。" }
+            ]
+        },
+        {
+            jp: "尊い… (推しを見て)",
+            template: ["He", "is", "so", "expensive", "."],
+            mistakes: [
+                { index: 3, wrong: "expensive", correct: "precious", explain: "「尊い」を 'Expensive' (値段が高い) と訳すと、金銭的な話になります。'Precious' (貴重、尊い) が適切。" }
+            ]
+        },
+        {
+            jp: "ぴえん",
+            template: ["I", "am", "paon", "."],
+            mistakes: [
+                { index: 2, wrong: "paon", correct: "sad", explain: "「ぱおん」は英語ではありません。悲しいなら 'sad' や 'crying' を使いましょう。" }
+            ]
+        },
+        {
+            jp: "り (了解)",
+            template: ["Re", "."],
+            mistakes: [
+                { index: 0, wrong: "Re", correct: "Roger", explain: "「り」は 'R' や 'Re' では通じません。了解なら 'Roger' や 'OK', 'Got it' です。" }
+            ]
+        },
+        {
+            jp: "マジ神なんだけど。",
+            template: ["He", "is", "literally", "God", "."],
+            mistakes: [
+                { index: 3, wrong: "God", correct: "amazing", explain: "文字通りの 'God' (全知全能の神) というと宗教的な意味が強すぎます。'Amazing' や 'The GOAT' (Greatest of All Time) がスラング。" }
+            ]
+        },
+        {
+            jp: "詰んだ。",
+            template: ["I", "am", "checkmate", "."],
+            mistakes: [
+                { index: 2, wrong: "checkmate", correct: "screwed", explain: "チェス用語ですが、日常会話で自分が「チェックメイトだ」とは言いません。'I'm screwed' (終わった、やらかした) が自然。" }
+            ]
+        },
+        {
+            jp: "リア充爆発しろ",
+            template: ["Real", "people", "should", "explode", "."],
+            mistakes: [
+                { index: 0, wrong: "Real", correct: "Happy", explain: "リア充は 'Real life' が充実している人ですが、'Real people' だと「実在する人間」になります。" },
+                { index: 3, wrong: "explode", correct: "vanish", explain: "本当に爆発(explode)させるとテロ予告になります。憎しみを込めて 'Go to hell' くらいが意訳として近いかも。" }
+            ]
+        }
+    ];
+
+    // --- ゲーム状態 ---
+    let currentStage = 1;
+    let maxHP = 3;
+    let currentHP = 3;
+    let currentQuestion = null;
+    let activeErrors = [];
+    let foundErrors = [];
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        resetGame();
+        loadStage();
+    }
+
+    // ★追加: リトライ専用関数
+    function retryGame() {
+        document.getElementById('gameover-screen').classList.add('hidden');
+        resetGame();
+        loadStage();
+    }
+
+    function resetGame() {
+        currentStage = 1;
+        currentHP = maxHP;
+        updateStatus();
+    }
+
+    function updateStatus() {
+        document.getElementById('stage-display').textContent = `STAGE ${currentStage}`;
+        let hearts = "";
+        for(let i=0; i<currentHP; i++) hearts += "❤️";
+        for(let i=currentHP; i<maxHP; i++) hearts += "🖤";
+        document.getElementById('hp-display').textContent = hearts;
+    }
+
+    function getRandomQuestion() {
+        return questions[Math.floor(Math.random() * questions.length)];
+    }
+
+    function loadStage() {
+        const gameArea = document.getElementById('game-area');
+        gameArea.innerHTML = '';
+        
+        currentQuestion = getRandomQuestion();
+        
+        activeErrors = [];
+        foundErrors = [];
+        const possibleMistakes = [...currentQuestion.mistakes];
+        const numErrors = Math.floor(Math.random() * 3) + 1; 
+        const actualErrorsCount = Math.min(numErrors, possibleMistakes.length);
+        
+        for (let i = 0; i < actualErrorsCount; i++) {
+            if (possibleMistakes.length === 0) break;
+            const randIndex = Math.floor(Math.random() * possibleMistakes.length);
+            activeErrors.push(possibleMistakes[randIndex]);
+            possibleMistakes.splice(randIndex, 1);
+        }
+
+        // 日本語
+        const jpRow = document.createElement('div');
+        jpRow.className = 'chat-row jp';
+        jpRow.innerHTML = `
+            <div class="avatar">🇯🇵</div>
+            <div class="bubble jp">${currentQuestion.jp}</div>
+        `;
+        gameArea.appendChild(jpRow);
+
+        // 英語
+        const enRow = document.createElement('div');
+        enRow.className = 'chat-row en';
+        
+        let wordsHtml = '';
+        currentQuestion.template.forEach((word, index) => {
+            const errorObj = activeErrors.find(e => e.index === index);
+            let displayWord = word; 
+            let isError = false;
+
+            if (errorObj) {
+                displayWord = errorObj.wrong; 
+                isError = true;
+            }
+
+            wordsHtml += `<span class="word-btn" data-index="${index}" data-is-error="${isError}" onclick="handleWordClick(this)">${displayWord}</span>`;
+        });
+
+        enRow.innerHTML = `
+            <div class="avatar">🇺🇸</div>
+            <div class="bubble en">${wordsHtml}</div>
+        `;
+        gameArea.appendChild(enRow);
+        
+        // スクロールを一番下へ
+        gameArea.scrollTop = gameArea.scrollHeight;
+    }
+
+    function handleWordClick(element) {
+        if (element.classList.contains('busted') || element.classList.contains('wrong-tap')) return;
+
+        const isError = element.getAttribute('data-is-error') === 'true';
+        const index = parseInt(element.getAttribute('data-index'));
+
+        if (isError) {
+            element.classList.add('busted');
+            foundErrors.push(index);
+        } else {
+            element.classList.add('wrong-tap');
+            takeDamage();
+        }
+    }
+
+    function takeDamage() {
+        currentHP--;
+        updateStatus();
+        
+        const container = document.getElementById('game-container');
+        container.classList.add('damage-effect');
+        setTimeout(() => container.classList.remove('damage-effect'), 500);
+
+        if (currentHP <= 0) {
+            // ダメージ演出の後にゲームオーバー画面を出すための遅延
+            setTimeout(gameOver, 500);
+        }
+    }
+
+    function checkFinish() {
+        const missingErrors = activeErrors.filter(e => !foundErrors.includes(e.index));
+
+        if (missingErrors.length > 0) {
+            alert(`まだ ${missingErrors.length} 個の間違いが残っています！`);
+            takeDamage();
+        } else {
+            showReview();
+        }
+    }
+
+    function showReview() {
+        const reviewScreen = document.getElementById('review-screen');
+        const reviewContent = document.getElementById('review-content');
+        
+        let html = '';
+        let correctSentence = [...currentQuestion.template];
+        
+        html += `<div class="review-item">
+            <h3>Correct Sentence:</h3>
+            <p class="review-correct" style="font-size:1.2rem;">"${correctSentence.join(' ').replace(/ \./g, '.')}"</p>
+        </div>`;
+
+        if (activeErrors.length > 0) {
+            html += `<h3>Mistake Points:</h3>`;
+            activeErrors.forEach(err => {
+                html += `
+                <div class="review-item">
+                    <p><span class="review-wrong">${err.wrong}</span> ➔ <span class="review-correct">${err.correct}</span></p>
+                    <p style="font-size:0.9rem;">${err.explain}</p>
+                </div>
+                `;
+            });
+        } else {
+            html += `<p>今回は完璧な英語でした！</p>`;
+        }
+
+        reviewContent.innerHTML = html;
+        reviewScreen.classList.remove('hidden');
+    }
+
+    function nextStage() {
+        document.getElementById('review-screen').classList.add('hidden');
+        currentStage++;
+        updateStatus();
+        loadStage();
+    }
+
+    function gameOver() {
+        document.getElementById('final-score').textContent = currentStage;
+        document.getElementById('gameover-screen').classList.remove('hidden');
+    }
+
+</script>
+
+</body>
+</html>
